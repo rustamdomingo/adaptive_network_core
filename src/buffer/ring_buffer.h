@@ -12,7 +12,8 @@ extern "C" {
 /*
  * Single Producer / Single Consumer ring buffer.
  *
- * The buffer stores fixed-size elements in a pre-allocated memory region.
+ * The buffer stores fixed-size elements in a pre-allocated
+ * memory region.
  *
  * Producer:
  *   - writes elements
@@ -23,6 +24,8 @@ extern "C" {
  *   - advances the read position
  *
  * The implementation does not allocate memory internally.
+ *
+ * Capacity must be a power of two.
  */
 
 typedef struct {
@@ -34,12 +37,18 @@ typedef struct {
     /*
      * Positions are monotonically increasing counters.
      *
-     * The physical position inside the buffer is obtained by:
+     * The physical position inside the buffer is calculated
+     * using a bitwise mask because capacity is required to be
+     * a power of two:
      *
-     *     position % capacity
+     *     position & (capacity - 1)
      *
-     * Using counters instead of directly wrapping indices makes
-     * full/empty detection explicit.
+     * This is equivalent to position % capacity for
+     * power-of-two capacities.
+     *
+     * Using monotonically increasing counters instead of
+     * directly wrapping indices makes full/empty detection
+     * explicit.
      */
     size_t head;
     size_t tail;
@@ -55,8 +64,14 @@ typedef struct {
  * capacity:
  *     Number of elements that can be stored.
  *
+ *     Must be a power of two.
+ *
  * element_size:
  *     Size of one element in bytes.
+ *
+ * Returns:
+ *     true  - initialization succeeded.
+ *     false - invalid parameters.
  */
 bool anr_ring_buffer_init(
     anr_ring_buffer_t *rb,
