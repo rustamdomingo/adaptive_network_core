@@ -3,10 +3,43 @@
 #include <string.h>
 
 
-static size_t
-anr_ring_buffer_index(const anr_ring_buffer_t *rb, size_t position)
+/*
+ * Check whether a value is a power of two.
+ *
+ * Valid values:
+ *
+ *     1, 2, 4, 8, 16, ...
+ *
+ * This property allows the ring-buffer index to use
+ * a bitwise mask instead of modulo division.
+ */
+static bool
+anr_ring_buffer_is_power_of_two(size_t value)
 {
-    return position % rb->capacity;
+    return value != 0 &&
+           (value & (value - 1)) == 0;
+}
+
+
+/*
+ * Calculate the physical position inside the ring buffer.
+ *
+ * Because capacity is guaranteed to be a power of two,
+ *
+ *     position % capacity
+ *
+ * is equivalent to:
+ *
+ *     position & (capacity - 1)
+ *
+ * This avoids modulo arithmetic in the hot path.
+ */
+static size_t
+anr_ring_buffer_index(
+    const anr_ring_buffer_t *rb,
+    size_t position)
+{
+    return position & (rb->capacity - 1);
 }
 
 
@@ -24,7 +57,7 @@ anr_ring_buffer_init(
     if (memory == NULL)
         return false;
 
-    if (capacity == 0)
+    if (!anr_ring_buffer_is_power_of_two(capacity))
         return false;
 
     if (element_size == 0)
@@ -105,12 +138,17 @@ anr_ring_buffer_push(
     if (anr_ring_buffer_full(rb))
         return false;
 
-    size_t index = anr_ring_buffer_index(rb, rb->head);
+    size_t index =
+        anr_ring_buffer_index(rb, rb->head);
 
     uint8_t *destination =
         rb->data + (index * rb->element_size);
 
-    memcpy(destination, element, rb->element_size);
+    memcpy(
+        destination,
+        element,
+        rb->element_size
+    );
 
     rb->head++;
 
@@ -130,12 +168,17 @@ anr_ring_buffer_pop(
     if (anr_ring_buffer_empty(rb))
         return false;
 
-    size_t index = anr_ring_buffer_index(rb, rb->tail);
+    size_t index =
+        anr_ring_buffer_index(rb, rb->tail);
 
     uint8_t *source =
         rb->data + (index * rb->element_size);
 
-    memcpy(element, source, rb->element_size);
+    memcpy(
+        element,
+        source,
+        rb->element_size
+    );
 
     rb->tail++;
 
@@ -154,7 +197,9 @@ anr_ring_buffer_peek(
     if (anr_ring_buffer_empty(rb))
         return NULL;
 
-    size_t index = anr_ring_buffer_index(rb, rb->tail);
+    size_t index =
+        anr_ring_buffer_index(rb, rb->tail);
 
-    return rb->data + (index * rb->element_size);
+    return rb->data +
+           (index * rb->element_size);
 }
