@@ -4,10 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
 #define CAPACITY 1024
 #define OPERATIONS 1000000
-
 
 int
 main(void)
@@ -26,8 +24,8 @@ main(void)
             &rb,
             storage,
             CAPACITY,
-            sizeof(uint32_t)))
-    {
+            sizeof(uint32_t))) {
+
         printf("Result: FAIL\n");
         free(storage);
         return 1;
@@ -40,10 +38,6 @@ main(void)
 
         value = (uint32_t)i;
 
-        /*
-         * If the buffer is full, consume one element
-         * before inserting the next one.
-         */
         if (!anr_ring_buffer_push(&rb, &value)) {
 
             if (!anr_ring_buffer_pop(&rb, &output)) {
@@ -60,13 +54,6 @@ main(void)
         }
     }
 
-    /*
-     * Drain the remaining elements.
-     *
-     * This verifies that the buffer remains internally
-     * consistent after a large number of wraparound
-     * operations.
-     */
     while (!anr_ring_buffer_empty(&rb)) {
 
         if (!anr_ring_buffer_pop(&rb, &output)) {
